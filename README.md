@@ -1,8 +1,8 @@
 # QuantProjects
 
-A collection of quantitative finance projects to build skills in maths, statistics, programming, and trading research.
+A collection of quantitative finance projects to build skills in maths, statistics, programming, and trading research. Projects 1 - 10 are completed using Python and 11 - 13 using C++. It is all documented in Jupyter Notebooks under the corresponding file names.
 
-## Projects
+## Python Projects
 
 1. Market Data Collector, Visualiser & EDA Toolkit (Foundation)
 - Goal: Build a toolkit to fetch, clean, and explore financial data.
@@ -79,3 +79,31 @@ Stage 3 (Advanced): Black-Litterman, risk parity, shrinkage covariance.
 - Key Skills: Dimensionality reduction, topological data analysis (TDA).
 - Deliverables: Detect regime shifts via geometry.
 - Stretch: Compare clustering results with standard correlation-based approaches.
+
+## C++ Projects
+
+11. Backtesting Engine & Order Book Simulator (Execution + Infrastructure)
+- Why C++? Backtesting and order book simulation benefit from speed + memory efficiency. Real HFT systems use C++ for this.
+What to do:
+- Reimplement Project 2 (Backtester) but in C++.
+- Support technical strategies (MA crossover, RSI).
+- Add an order book simulator for limit vs market orders.
+- Skills practiced: Object-oriented design, performance profiling, multi-threading.
+- Stretch: Add logging, risk checks, and position sizing.
+
+12. Monte Carlo Simulation for Option Pricing (Stochastic Simulation)
+- Why C++? Monte Carlo is computationally heavy. C++ can handle millions of paths faster than Python.
+What to do:
+- Reimplement Project 6 (Monte Carlo Simulation).
+- Price European options under Black-Scholes.
+- Skills practiced: Random number generation, numerical integration, memory-efficient array handling.
+- Stretch: Parallelise simulations with OpenMP or CUDA (GPU).
+
+13. High-Performance Portfolio Optimiser
+- Why C++? Optimisation problems (Markowitz, risk parity) often involve large matrices. C++ with Eigen or Armadillo is fast.
+What to do:
+- Reimplement Project 7 (Portfolio Optimisation & Risk Modeling) in C++.
+- Compute efficient frontier and optimal weights.
+- Compare runtime vs Python version.
+- Skills practiced: Linear algebra in C++ (Eigen), numerical stability, precision handling.
+- Stretch: Add CVaR optimization or Black-Litterman.
