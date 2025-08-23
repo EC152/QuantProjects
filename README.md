@@ -1,6 +1,6 @@
 # QuantProjects
 
-A collection of quantitative finance projects to build skills in maths, statistics, programming, and trading research. Projects 1 - 10 are completed using Python and 11 - 13 using C++. It is all documented in Jupyter Notebooks under the corresponding folder names. There is also a QuantProblems folder which aims to explore frequent interview questions and problems. 
+A collection of quantitative finance projects to build skills in maths, statistics, programming, and trading research. Projects 1 - 9 are completed using Python and 10 - 12 using C++. It is all documented in Jupyter Notebooks under the corresponding folder names. There is also a QuantProblems folder which aims to explore frequent interview questions and problems. 
 
 ## Python Projects
 
@@ -73,16 +73,9 @@ A collection of quantitative finance projects to build skills in maths, statisti
 - Deliverables: ML model predicting stock return direction / alpha factors.
 - Stretch: Integrate with risk model to form a long-short portfolio.
 
-10. Cutting Edge: Geometry & Topology in Finance (Research frontier)
-- Goal: Apply geometric/topological tools to financial data.
-- Topics: PCA, Isomap, MDS, persistent homology, clustering.
-- Key Skills: Dimensionality reduction, topological data analysis (TDA).
-- Deliverables: Detect regime shifts via geometry.
-- Stretch: Compare clustering results with standard correlation-based approaches.
-
 ## C++ Projects
 
-11. Backtesting Engine & Order Book Simulator (Execution + Infrastructure)
+10. Backtesting Engine & Order Book Simulator (Execution + Infrastructure)
 - Why C++? Backtesting and order book simulation benefit from speed + memory efficiency. Real HFT systems use C++ for this.
 - What to do:
 - Reimplement Project 2 (Backtester) but in C++.
@@ -91,7 +84,7 @@ A collection of quantitative finance projects to build skills in maths, statisti
 - Skills practiced: Object-oriented design, performance profiling, multi-threading.
 - Stretch: Add logging, risk checks, and position sizing.
 
-12. Monte Carlo Simulation for Option Pricing (Stochastic Simulation)
+11. Monte Carlo Simulation for Option Pricing (Stochastic Simulation)
 - Why C++? Monte Carlo is computationally heavy. C++ can handle millions of paths faster than Python.
 - What to do:
 - Reimplement Project 6 (Monte Carlo Simulation).
@@ -99,7 +92,7 @@ A collection of quantitative finance projects to build skills in maths, statisti
 - Skills practiced: Random number generation, numerical integration, memory-efficient array handling.
 - Stretch: Parallelise simulations with OpenMP or CUDA (GPU).
 
-13. High-Performance Portfolio Optimiser
+12. High-Performance Portfolio Optimiser
 - Why C++? Optimisation problems (Markowitz, risk parity) often involve large matrices. C++ with Eigen or Armadillo is fast.
 - What to do:
 - Reimplement Project 7 (Portfolio Optimisation & Risk Modeling) in C++.
