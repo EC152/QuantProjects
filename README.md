@@ -1,102 +1,96 @@
 # QuantProjects
 
-A collection of quantitative finance projects to build skills in maths, statistics, programming, and trading research. Projects 1 - 9 are completed using Python and 10 - 12 using C++. It is all documented in Jupyter Notebooks under the corresponding folder names. There is also a QuantProblems folder which aims to explore frequent interview questions and problems. 
+A curated portfolio of quantitative finance projects covering systematic trading, derivatives, market making, stochastic modelling, empirical finance, machine learning, and portfolio optimisation.
 
-## Python Projects
+The repository focuses on applied research and implementation in Python, C++, and R. Each project is structured as a standalone piece of quantitative finance work, with emphasis on methodology, numerical implementation, backtesting discipline, model validation, and economic interpretation.
 
-1. Market Data Collector, Visualiser & EDA Toolkit (Foundation)
-- Goal: Build a toolkit to fetch, clean, and explore financial data.
-- Topics: Market data, simple/log returns, moving averages, volatility.
-- Key Skills: pandas, matplotlib, yfinance.
-- Deliverables: Annotated notebook with summary stats, plots, volatility cone.
-- Stretch: Auto-download universes (e.g. S&P500), Sharpe ratio, volatility cones.
+Projects have been cleaned and anonymised for public portfolio use. Academic identifiers, institution-specific wording, team-member names, and assessment-specific instructions should be removed before publication. The aim is to present the work as independent technical projects rather than assignment submissions.
 
-2. Backtesting Engine + Technical Signal Strategies (Execution infrastructure)
-- Goal: Create a simple backtesting engine.
-- Topics: Order simulation, vectorised backtesting, drawdowns.
-- Key Skills: Modular code design, handling transaction costs.
-- Deliverables: Backtests of moving average crossovers, RSI, Bollinger Bands.
-- Stretch: Position sizing (Kelly, vol targeting), modular strategy interface.
+## Projects
 
-3. Time Series Analysis of Returns (Statistics basics)
-- Goal: Understand dependence and volatility clustering in returns.
-- Topics: ACF/PACF, Ljung-Box test, rolling volatility, clustering.
-- Key Skills: statsmodels, rolling windows.
-- Deliverables: Notebook with ACF plots, volatility clustering evidence.
-- Stretch: Fit AR(1) and GARCH(1,1).
+| Project                                               | Description                                                                                                                                                                                                                    | Main Techniques                                                                                                                                                                                     |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Systematic Trading with ML Meta-Labelling           | Multi-asset systematic trading pipeline estimating when primary signals should be traded, with probability forecasts converted into volatility-targeted strategy weights across equity indices, metals, and energy instruments | Triple-Barrier Labelling, Purged K-Fold CV, Embargoing, Sample-Uniqueness Weights, Calibration, SHAP/MDI/MDA Feature Importance, HMM/GMM/PCA Features, XGBoost, Neural Models, Volatility Targeting |
+| 2 Heston Option Market Making                         | Option market-making framework where optimal bid/ask quotes are dynamically selected under stochastic volatility and Greek-driven inventory risk                                                                               | Heston Variance Dynamics, Black-Scholes Proxy Greeks, Poisson Order Arrivals, Stochastic Control, Backward Dynamic Programming, Greek-Weighted Inventory Penalties, Monte Carlo Backtesting         |
+| 3 Multi-Strategy Optibook Trading Engine              | Live-style trading engine combining option market making, relative-value arbitrage, basis trades, dual-listed arbitrage, execution controls, and automated hedging                                                             | Black-Scholes Valuation, Implied Volatility, Option Greeks, Inventory-Skewed Quoting, Box/Vertical/Put-Call-Parity Arbitrage, Futures/ETF Basis Trading, Delta Hedging                              |
+| 4 Systematic Equity Factor Strategy                   | Equity factor strategy combining residual momentum, constrained portfolio construction, risk controls, and regime-aware allocation                                                                                             | Residual Momentum, Convex Optimisation, Dollar/Beta/Sector Neutrality, Volatility Targeting, EWMA Covariance, Factor Backtesting, HMM/XGBoost Regime Allocation                                     |
+| 5 C++ Markowitz Portfolio Optimiser                   | High-performance C++ implementation of mean-variance portfolio optimisation with rolling out-of-sample testing and robust strategy extensions                                                                                  | KKT Systems, Conjugate Gradient, Dense Matrix Design, Rolling Backtests, Covariance Shrinkage, Long-Only Constraints, Transaction-Cost Sweeps, Bootstrap Inference                                  |
+| 6 Local-Volatility Barrier Option PDE Pricing         | Numerical pricer for an up-and-out European call under local volatility, implemented with explicit finite differences and stability diagnostics                                                                                | Local-Volatility PDEs, Barrier Boundary Conditions, Explicit Finite Differences, Conditional Stability Analysis, Convergence Testing, Value-Profile and Surface Visualisation                       |
+| 7 Macro Regime Detection and Tactical Allocation      | Macro-financial regime detection framework used to classify market states and adapt equity/bond allocation dynamically                                                                                                         | PCA, K-Means Clustering, Hierarchical Clustering, Regime Labelling, Recession Validation, Out-of-Sample Testing, Transaction Costs, Tactical Allocation                                             |
+| 8 FX Strategy Combination and Currency Factor Pricing | Empirical FX project combining long-short currency strategies ex-ante and testing whether currency portfolio returns are priced by common risk factors                                                                         | Currency Strategy Weighting, Volatility Targeting, Ledoit-Wolf Covariance Shrinkage, Regime-Conditional Sharpe Weighting, Fama-MacBeth Regressions, Newey-West/Shanken Inference                    |
+| 9 Yield-Curve Forecasting and Dynamic Allocation      | Empirical study of whether term-spread signals improve equity return forecasts and generate economic value in tactical asset allocation                                                                                        | Predictive Regressions, Rolling-Window Forecasting, Stationarity Diagnostics, Clark-West Tests, Mark-Kilian Bootstrap, Volatility-Targeted Allocation, Performance-Fee Analysis                     |
+| 10 Financial Statistics and Short-Rate Modelling      | Statistical finance toolkit covering equity factor regressions, directional prediction, and short-rate model estimation                                                                                                        | CAPM, Asymmetric Beta Regressions, F-Tests, T-Tests, Linear Probability Models, Hit-Ratio Optimisation, CIR Estimation, Vasicek Comparison, Maximum Likelihood                                      |
+| 11 Equity Portfolio and APT Analysis                  | Portfolio-analysis project evaluating equity risk-return behaviour, diversification, investor utility, and factor exposures                                                                                                    | Return Calculation, Covariance Matrices, Sharpe Ratios, Capital Allocation Line, Mean-Variance Utility, Single-Factor APT Betas, Multi-Factor Extension Discussion                                  |
 
-4. Pairs Trading & Statistical Arbitrage (Progressive)
-- Merge Pairs Trading (z-score) + Cointegration/OU Process into a single progressive project.
-- Stage 1:
-- Test for cointegration, trade on z-scores.
-- Skills: ADF test, z-scores, spread visualisation.
-- Stage 2:
-- Ornstein-Uhlenbeck calibration, Johansen test, Kalman filter hedge ratios.
-- Skills: OU process, dynamic hedge ratios.
-- Deliverables: Backtests of pairs trades, Sharpe, drawdowns.
+## Technical Coverage
 
-5. Option Pricing: Binomial → Black-Scholes → Greeks (Derivatives core)
-- Merge Extended Binomial + Black-Scholes.
-- Stage 1: Implement binomial trees (European + American).
-- Stage 2: Black-Scholes formula, Greeks, dividend adjustment.
-- Key Skills: Recombining trees, PDE intuition, closed forms.
-- Deliverables: Prices + Greeks plotted vs strike/time.
-- Stretch: Trinomial trees, barrier options, implied vol surface visualiser.
+### Programming and Implementation
 
-6. Monte Carlo Simulation (Options & Portfolio Forecasting) (Simulation)
-- Merge Monte Carlo projects into one progression.
-- Stage 1: Random walks, GBM paths, option pricing vs Black-Scholes.
-- Stage 2: Portfolio return distribution forecasting.
-- Stage 3 (Advanced): Stochastic volatility (Heston model).
-- Key Skills: Euler–Maruyama, variance reduction, correlated Brownian motions.
-- Stretch: Exotic options (barrier, Asian), FFT pricing (Carr-Madan).
+* Python: pandas, NumPy, scikit-learn, TensorFlow, XGBoost, matplotlib, seaborn
+* C++: Custom Matrix Classes, Numerical Linear Algebra, Conjugate Gradient, Rolling Backtest Architecture
+* R: Regression Modelling, Statistical Inference, Short-Rate Estimation
+* Jupyter Notebooks, Python Scripts, and Report-Style Research Documentation
 
-7. Portfolio Optimisation & Risk Modeling (Core quant research)
-- Merge Markowitz + VaR + Risk Models.
-- Stage 1: Efficient frontier, Sharpe-max portfolio.
-- Stage 2: Risk measures → Historical, parametric, Monte Carlo VaR.
-- Stage 3 (Advanced): Black-Litterman, risk parity, shrinkage covariance.
-- Deliverables: Efficient frontier plot, VaR comparison table.
-- Stretch: Rolling window optimisation, CVaR.
+### Trading and Market Microstructure
 
-8. Algorithmic Trading Simulator & Strategy Executor (Infrastructure, advanced)
-- Goal: Build an execution simulator for order flow.
-- Topics: Limit vs market orders, slippage, latency, order book simulation.
-- Key Skills: Tick-level simulation, logging, real-time handling.
-- Deliverables: Run technical/stat-arb strategies in a simulated environment.
-- Stretch: Add stop-loss, bracket orders, backtest vs live toggle.
+* Systematic Trading Signal Validation
+* ML Meta-Labelling
+* Volatility-Targeted Strategy Construction
+* Option Market Making
+* Inventory-Skewed Quoting
+* Relative-Value Arbitrage
+* Basis Trading
+* Execution Controls
+* Automated Hedging
+* Transaction-Cost-Aware Backtesting
 
-9. Machine Learning for Factor Alpha (Prediction-focused)
-- Goal: Use ML to generate predictive signals.
-- Topics: Feature engineering (lags, rolling stats, factors), ranking models.
-- Key Skills: XGBoost/LightGBM, SHAP, walk-forward validation.
-- Deliverables: ML model predicting stock return direction / alpha factors.
-- Stretch: Integrate with risk model to form a long-short portfolio.
+### Derivatives and Numerical Finance
 
-## C++ Projects
+* Black-Scholes Pricing and Greeks
+* Implied Volatility Estimation
+* Heston Stochastic Volatility
+* Local-Volatility Models
+* Barrier Option Pricing
+* Finite-Difference PDE Methods
+* Monte Carlo Backtesting
+* Dynamic Programming for Stochastic Control
 
-10. Backtesting Engine & Order Book Simulator (Execution + Infrastructure)
-- Why C++? Backtesting and order book simulation benefit from speed + memory efficiency. Real HFT systems use C++ for this.
-- What to do:
-- Reimplement Project 2 (Backtester) but in C++.
-- Support technical strategies (MA crossover, RSI).
-- Add an order book simulator for limit vs market orders.
-- Skills practiced: Object-oriented design, performance profiling, multi-threading.
-- Stretch: Add logging, risk checks, and position sizing.
+### Portfolio Construction and Risk
 
-11. Monte Carlo Simulation for Option Pricing (Stochastic Simulation)
-- Why C++? Monte Carlo is computationally heavy. C++ can handle millions of paths faster than Python.
-- What to do:
-- Reimplement Project 6 (Monte Carlo Simulation).
-- Price European options under Black-Scholes.
-- Skills practiced: Random number generation, numerical integration, memory-efficient array handling.
-- Stretch: Parallelise simulations with OpenMP or CUDA (GPU).
+* Markowitz Mean-Variance Optimisation
+* KKT Systems and Constrained Optimisation
+* Convex Portfolio Optimisation
+* Dollar, Beta, and Sector Neutrality
+* Covariance Shrinkage
+* Long-Only and Equal-Weight Benchmarks
+* Rolling Out-of-Sample Evaluation
+* Volatility Targeting
+* Drawdowns, Turnover, Sharpe Ratios, and Bootstrap Inference
 
-12. High-Performance Portfolio Optimiser
-- Why C++? Optimisation problems (Markowitz, risk parity) often involve large matrices. C++ with Eigen or Armadillo is fast.
-- What to do:
-- Reimplement Project 7 (Portfolio Optimisation & Risk Modeling) in C++.
-- Compute efficient frontier and optimal weights.
-- Compare runtime vs Python version.
-- Skills practiced: Linear algebra in C++ (Eigen), numerical stability, precision handling.
-- Stretch: Add CVaR optimisation or Black-Litterman.
+### Empirical Finance and Statistical Learning
+
+* FX Strategy Combination
+* Currency Factor Pricing
+* Fama-MacBeth Regressions
+* Term-Spread Forecasting
+* Clark-West Forecast Comparison
+* Mark-Kilian Bootstrap Inference
+* PCA, K-Means, Hierarchical Clustering, HMM/GMM Regime Features
+* CAPM, APT, CIR, and Vasicek Modelling
+
+## Repository Structure
+
+```text
+QuantProjects/
+├── 1_systematic_trading_ml_meta_labelling/
+├── 2_heston_option_market_making/
+├── 3_optibook_multistrategy_trading_engine/
+├── 4_systematic_equity_factor_strategy/
+├── 5_cpp_markowitz_portfolio_optimiser/
+├── 6_local_volatility_barrier_pde_pricing/
+├── 7_macro_regime_detection_tactical_allocation/
+├── 8_fx_strategy_combination_currency_factor_pricing/
+├── 9_yield_curve_forecasting_dynamic_allocation/
+├── 10_financial_statistics_short_rate_modelling/
+└── 11_equity_portfolio_apt_analysis/
+```
