@@ -82,15 +82,15 @@ Projects have been cleaned and anonymised for public portfolio use. Academic ide
 
 ```text
 QuantProjects/
-├── 1_systematic_trading_ml_meta_labelling/
-├── 2_heston_option_market_making/
-├── 3_optibook_multistrategy_trading_engine/
-├── 4_systematic_equity_factor_strategy/
-├── 5_cpp_markowitz_portfolio_optimiser/
-├── 6_local_volatility_barrier_pde_pricing/
-├── 7_macro_regime_detection_tactical_allocation/
-├── 8_fx_strategy_combination_currency_factor_pricing/
-├── 9_yield_curve_forecasting_dynamic_allocation/
+├── 01_systematic_trading_ml_meta_labelling/
+├── 02_heston_option_market_making/
+├── 03_optibook_multistrategy_trading_engine/
+├── 04_systematic_equity_factor_strategy/
+├── 05_cpp_markowitz_portfolio_optimiser/
+├── 06_local_volatility_barrier_pde_pricing/
+├── 07_macro_regime_detection_tactical_allocation/
+├── 08_fx_strategy_combination_currency_factor_pricing/
+├── 09_yield_curve_forecasting_dynamic_allocation/
 ├── 10_financial_statistics_short_rate_modelling/
 └── 11_equity_portfolio_apt_analysis/
 ```
