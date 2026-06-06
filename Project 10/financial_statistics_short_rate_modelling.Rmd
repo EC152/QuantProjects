@@ -1,0 +1,1361 @@
+---
+title: "Financial Statistics Short Rate Modelling"
+format: 
+  pdf:
+    geometry: 
+      - top=1cm
+      - left=1.5cm
+      - right=1.5cm
+      - bottom=2.5cm
+    include-in-header:
+      text: |
+        \usepackage{titling}
+        \pretitle{\begin{center}\Huge}
+        \posttitle{\end{center}}
+        \usepackage{fancyhdr}
+        \usepackage{graphicx}
+        \pagestyle{fancy}
+        \setlength{\headheight}{50pt}
+        \fancyhead[C]{}
+        \fancyhead[R]{}
+---
+
+\newpage
+\tableofcontents
+\listoftables
+\listoffigures
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Package and Data Loading
+
+```{r}
+# Import Libraries
+library(readxl)
+library(data.table)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(knitr)
+library(car)
+library(tidyr)
+library(kableExtra)
+library(caret)
+
+# Import Data
+q1_data <- read_excel("data_coursework1_Q1.xls")
+q2_data <- read_excel("data_coursework1_Q2.xls")
+q3_data <- read_excel("data_coursework_Q3.xls")
+```
+
+# Question 1
+
+This question examines whether the CAPM adequately explains the relationship between the stock’s excess return and the market’s excess return using the dataset `data_coursework_Q1.xls`. The standard CAPM regression is:
+
+$$ r_{it} - r_{ft} = \alpha + \beta (r_{Mt} - r_{ft}) + u_t, $$
+
+where $\alpha$ captures abnormal performance and $\beta$ measures market exposure.
+
+For the CAPM we famously have: 
+
+$$\beta = \frac{\text{Cov}({r_i,r_{Mt}})}{\text{Var}(r_{Mt})}$$
+
+To allow for asymmetric reactions to market movements, a second specification introduces an indicator variable $D_t = 1$ when $(r_{Mt} - r_{ft}) > 0$ and $0$ otherwise. The second linear regression model is:
+
+$$
+r_{it} - r_{ft}
+= \alpha 
++ \beta_1 D_t (r_{Mt} - r_{ft})
++ \beta_2 (1 - D_t)(r_{Mt} - r_{ft})
++ \beta_3 (r_{Mt} - r_{ft})^2
++ u_t
+$$
+
+\newpage
+
+## Clean Data
+
+First, we clean the data by removing any unnecessary columns and removing rows prior to 1 January 1962 since IBM did not have a price before this date.
+
+```{r}
+# Keep only necessary columns and remove rows prior to 1 January 1962
+q1_clean <- q1_data %>%
+  select(year_, month_, date_, `1-month Tbill`, SP500, IBM) %>%
+  mutate(IBM = as.numeric(IBM)) %>%
+  filter(!is.na(IBM))
+```
+
+## Compute Simple Returns and Excess Returns
+
+Now we compute the simple returns and excess returns using the risk-free rate which needs to be divided by 100.
+
+```{r}
+q1 <- q1_clean %>%
+  arrange(year_, month_) %>%
+  mutate(
+    #Simple monthly returns
+    rM = SP500 / lag(SP500) - 1,
+    rI = IBM / lag(IBM) - 1,
+
+    # Monthly risk-free rate (as a decimal)
+    rf = `1-month Tbill` / 100,
+  ) %>%
+
+  # Drop first row with NA returns
+  filter(!is.na(rM) & !is.na(rI), !is.na(rf)) %>%
+  mutate(
+    
+    # Excess returns
+    rM_excess = rM - rf,
+    rI_excess = rI - rf
+  )
+```
+
+\newpage
+
+## First Linear Regression Model: CAPM
+
+Now we apply the first Standard CAPM regression model $$ r_{it} - r_{ft} = \alpha + \beta (r_{Mt} - r_{ft}) + u_t, $$ and obtain the regression results.
+
+```{r}
+capm <- lm(rI_excess ~ rM_excess, data = q1)
+summary_table <- tibble(
+  Regressor = c('$\\alpha$', '$\\beta$'),
+  `Estimate` = c(summary(capm)$coefficients[1,1], 
+                 summary(capm)$coefficients[2,1]),
+  `SE` = c(summary(capm)$coefficients[1,2], 
+           summary(capm)$coefficients[2,2]),
+  `T Value` = c(summary(capm)$coefficients[1,3], 
+                summary(capm)$coefficients[2,3]),
+  `P Value` = c(summary(capm)$coefficients[1,4], 
+                summary(capm)$coefficients[2,4]))
+r_table <- tibble(
+  Metric = c('R-squared', 'Adjusted R-squared'),
+  Value = c(summary(capm)$r.squared, summary(capm)$adj.r.squared))
+kable(summary_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'OLS on CAPM Results',
+      booktabs = FALSE,
+      escape = FALSE) %>%  
+  kable_styling(latex_options = c("bordered", "hold_position")) 
+kable(r_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'OLS on CAPM R-squared',
+      booktabs = FALSE) %>%
+  kable_styling(latex_options = c("bordered", "hold_position"))
+```
+To visually illustrate the CAPM estimation results, we plot IBM’s excess returns against the market excess returns along with the fitted regression line from the CAPM model:
+
+```{r}
+# CAPM Regression Plot
+
+ggplot(q1, aes(x = rM_excess, y = rI_excess)) +
+  geom_point(alpha = 0.6, color = "gray40") +
+  geom_smooth(method = "lm", se = TRUE, color = "blue", linetype = "solid") +
+  labs(title = "IBM Excess Return vs Market Excess Return",
+       x = "Market Excess Return",
+       y = "IBM Excess Return") +
+  theme_minimal()
+
+```
+
+\newpage
+
+As visualised in the previous plot, we can see that the CAPM regression shows that IBM’s excess return is strongly related to the market excess return, with a statistically significant beta of approximately 0.89 $(t \approx 11.8)$. This indicates that IBM is less volatile than the overall market, classifying it as a defensive stock. Such stocks tend to outperform the market during downturns and underperform during booms. It aligns with the notion that IBM operates in a relatively stable sector. We can also see that the intercept (alpha) is small (0.0027) and statistically insignificant $(p \approx 0.32)$, suggesting that IBM does not earn abnormal returns beyond what the CAPM predicts. This result is consistent with the CAPM assumption that expected returns are fully explained by market risk and that no systematic abnormal returns should persist. From the Multiple R-squared, the model explains around 29% of the variation in IBM’s excess returns, consistent with typical CAPM fits using monthly stock data.
+
+If we compare this to the known result from the CAPM:
+```{r}
+beta_capm <- cov(q1$rI_excess,q1$rM_excess)/var(q1$rM_excess)
+```
+$$\boxed{\beta_\text{CAPM} = 0.8856}$$
+
+We see that OLS produces the same result. In fact we can conduct a simple hypothesis test on:
+
+$$\text{H}_0: \beta = \beta_{\text{CAPM}}$$
+
+To do this we use the simple T-test: 
+
+$$
+t = \frac{\hat{\beta} - \beta_{0}}
+{s\sqrt{c_{ii}}}
+\sim t(T - k),
+$$
+
+```{r}
+beta_hat <- coef(capm)[2]
+# Standard error of the intercept from CAPM output
+se_beta <- summary(capm)$coefficients[2, 2]
+# Compute t-statistic for H0: beta = beta_capm
+t_stat <- (beta_hat - beta_capm) / se_beta
+# Degrees of freedom for the t-distribution
+df <- capm$df.residual
+# Two-sided p-value for the t-test
+p_val <- 2 * pt(abs(t_stat), df = df, lower.tail = FALSE)
+summary_table <- tibble(
+  Metric = c('T Statistic', 'P Value'),
+  Value = c(t_stat, p_val)
+)
+kable(summary_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'Results of CAPM and OLS beta Comparison',
+      booktabs = FALSE) %>%
+  kable_styling(latex_options = c("bordered", "hold_position"))
+```
+From this t-test we can see we cannot reject $\text{H}_0$ at any significance level, this is of course intuitive as they should be the exact same result.
+
+## Second Linear Regression Model
+
+Next, we apply the second regression model with asymmetric betas
+
+$$
+r_{it} - r_{ft}
+= \alpha 
++ \beta_1 D_t (r_{Mt} - r_{ft})
++ \beta_2 (1 - D_t)(r_{Mt} - r_{ft})
++ \beta_3 (r_{Mt} - r_{ft})^2
++ u_t
+$$
+
+and obtain the regression results.
+
+```{r}
+# Build the regression variables for the second model
+q1 <- q1 %>%
+  mutate(
+    D = as.numeric(rM_excess > 0),
+    D_rM = D * rM_excess,
+    one_minusD_rM = (1 - D) * rM_excess,
+    rM_sq = rM_excess^2)
+# Second model regression
+second <- lm(rI_excess ~ D_rM + one_minusD_rM + rM_sq, data = q1)
+summary_table <- tibble(
+  Regressor = c('$\\alpha$', '$\\beta_1$', '$\\beta_2$', '$\\beta_3$'),
+  `Estimate` = c(summary(second)$coefficients[1,1], 
+                 summary(second)$coefficients[2,1],
+                 summary(second)$coefficients[3,1],
+                 summary(second)$coefficients[4,1]),
+  `SE` = c(summary(second)$coefficients[1,2], 
+           summary(second)$coefficients[2,2],
+           summary(second)$coefficients[3,2],
+           summary(second)$coefficients[4,2]),
+  `T Value` = c(summary(second)$coefficients[1,3], 
+                summary(second)$coefficients[2,3],
+                summary(second)$coefficients[3,3],
+                summary(second)$coefficients[4,3]),
+  `P Value` = c(summary(second)$coefficients[1,4], 
+                summary(second)$coefficients[2,4],
+                summary(second)$coefficients[3,4],
+                summary(second)$coefficients[4,4]))
+r_table <- tibble(
+  Metric = c('R-squared', 'Adjusted R-squared'),
+  Value = c(summary(second)$r.squared, summary(second)$adj.r.squared))
+kable(summary_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'OLS on Second Model Results',
+      booktabs = FALSE,
+      escape = FALSE) %>%  
+  kable_styling(latex_options = c("bordered", "hold_position")) 
+kable(r_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'OLS on Second Model R-squared',
+      booktabs = FALSE) %>%
+  kable_styling(latex_options = c("bordered", "hold_position"))
+```
+
+The second model allows IBM’s sensitivity to market movements to differ between positive and negative market months. The estimated up-market beta $(\beta_1 \approx 1.62)$ is large and highly
+significant, whereas the down-market beta $(\beta_2 \approx 0.11)$ is small and statistically
+insignificant. An F-test rejects the null hypothesis $(\beta_1 = \beta_2)$, indicating clear evidence of asymmetric beta behavior. The squared market-excess-return term is marginally significant suggesting mild curvature in the return relationship. Overall, this model provides a modest improvement in explanatory power over the standard CAPM ($R^2 \approx 0.30$ vs $0.29$).
+
+\newpage
+
+```{r, fig.cap='Market vs IBM Excess Returns with Regime Betas'}
+plot(q1$rM_excess, q1$rI_excess, pch=16, col=grey(0.7),
+  main='Market vs IBM Excess Returns with Regime Betas',
+  xlab='Market Excess Return', ylab='IBM Excess Return')
+  abline(coef(second)[1], coef(second)[2], col='blue', lwd=2)
+  abline(coef(second)[1], coef(second)[3], col='red', lwd=2)
+  legend('topleft', legend=c('Up-market beta','Down-market beta'), 
+       col=c('blue','red'), lwd=2)
+```
+
+## F-Test
+
+Now we want to perform an F-test of $\text{H}_0: \beta_1 = \beta_2$. This can be done by using the standard linear-restriction formula:
+
+$$
+F =
+\frac{
+(R\hat{\beta} - r)^\top 
+\left[ R (X^\top X)^{-1} R^\top \right]^{-1}
+(R\hat{\beta} - r) / q
+}
+{\hat{e}^\top \hat{e} / (T - k)}
+\sim F(q,\,T-k),
+$$
+
+where $R$ encodes the restriction $\beta_1 - \beta_2 = 0$, $r = 0$, $q=1$, and $\hat{e}$ are the unrestricted residuals.
+
+$R$ is defined as: 
+
+$$R = \begin{bmatrix} 0 & 1 & -1 & 0 \end{bmatrix}$$
+\newpage
+
+```{r}
+# Design matrix and basic objects
+X  <- model.matrix(second)   # T x k
+y  <- q1$rI_excess
+T <- nrow(X)    # T
+k  <- ncol(X)   # k
+
+beta_hat <- coef(second) # k x 1
+e_hat <- resid(second)   # T x 1
+
+# Restriction: H0: beta_1 = beta_2
+# R = [0, 1, -1, 0], r = 0
+R <- matrix(c(0, 1, -1, 0), nrow = 1)  # 1 x k
+r <- 0
+
+# Number of restrictions
+q <- 1
+
+# Compute F-statistic using the linear restriction formula
+XtX_inv <- solve(t(X) %*% X)
+Rbeta_minus_r <- R %*% beta_hat - r
+
+num <- t(Rbeta_minus_r) %*% solve(R %*% XtX_inv %*% t(R)) %*% Rbeta_minus_r / q
+den <- sum(e_hat^2) / (T - k)
+
+F_stat <- as.numeric(num / den)
+p_val  <- 1 - pf(F_stat, df1 = q, df2 = T - k)
+
+summary_table <- tibble(
+  Metric = c('F Statistic', 'P Value'),
+  Value = c(F_stat, p_val)
+)
+
+kable(summary_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'Results of F-test on $\\text{H}_0: \\beta_1 = \\beta_2$',
+      booktabs = FALSE) %>%
+  kable_styling(latex_options = c("bordered", "hold_position"))
+```
+
+\newpage
+
+We can compare the computed F-statistic and p-value to those from the `linearHypothesis` function from the `car` package to verify our calculations.
+
+```{r}
+# Verify using car package
+f_test <- linearHypothesis(
+  second,
+  c("D_rM = one_minusD_rM")
+)
+f_test
+```
+
+The F-test for $\text{H}_0 : \beta_1 = \beta_2$ yields an F-statistic of 5.7668 and a p-value of 0.0169, in both methods, indicating rejection of the null at conventional significance levels ($\alpha = 5\%$).
+
+## T-Test
+
+To test the null hypothesis $\text{H}_0 : \alpha = 0$, we use the T-test statistic given by:
+
+$$
+t = \frac{\hat{\beta}_i - \beta_{i0}}
+{s\sqrt{c_{ii}}}
+\sim t(T - k),
+$$
+
+where $\hat{\beta}_i$ is the estimated coefficient, $\beta_{i0}$ is the value under the null (here $0$), $s^2 = \hat{e}^\top \hat{e}/(T - k)$ is the residual variance, and $c_{ii}$ is the $i^{th}$ diagonal element of $(X^\top X)^{-1}$.
+
+\newpage
+
+```{r}
+# Extract estimated intercept (alpha) from CAPM model
+alpha_hat <- coef(capm)[1]
+
+# H0: alpha = 0
+beta0 <- 0
+
+# Standard error of the intercept from CAPM output
+se_alpha <- summary(capm)$coefficients[1, 2]
+
+# Compute t-statistic for H0: alpha = 0
+t_stat <- (alpha_hat - beta0) / se_alpha
+
+# Degrees of freedom for the t-distribution
+df <- capm$df.residual
+
+# Two-sided p-value for the t-test
+p_val <- 2 * pt(abs(t_stat), df = df, lower.tail = FALSE)
+
+summary_table <- tibble(
+  Metric = c('t Statistic', 'P Value'),
+  Value = c(t_stat, p_val)
+)
+
+kable(summary_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'Results of t-test on $\\text{H}_0: \\alpha = 0$',
+      booktabs = FALSE) %>%
+  kable_styling(latex_options = c("bordered", "hold_position"))
+```
+
+The estimated intercept in the CAPM regression is small and statistically insignificant at 0.0027. We can see that the t-statistic for testing $\text{H}_0 : \alpha = 0$ is approximately 0.993, with a two-sided p-value of about 0.321 which matches the values in the CAPM summary. Since this p-value is well above conventional significance levels, we do not reject the null hypothesis, indicating that IBM does not earn abnormal returns relative to the CAPM benchmark over the sample period.
+
+\newpage
+
+# Question 2
+
+This question studies how to estimate the conditional probability that an equity
+return is positive using a linear probability model, and evaluate forecasting
+performance using the hit ratio.
+
+We take **ESR** as the equity index return $R_t$.
+
+```{r q2-esr-hist}
+hist(q2_data$ESR, breaks=30, col='lightblue', 
+     main='Distribution of ESR Returns', xlab='ESR Return')
+```
+
+## Construct Indicator Variable $Y_t$
+
+We define:
+$$
+Y_t = 1(R_t > 0) = \begin{cases}
+1 & R_t>0 \\
+0 & \text{otherwise}.
+\end{cases}
+$$
+
+```{r}
+R <- q2_data$ESR
+Y <- as.numeric(R > 0)
+n <- length(Y)
+n
+```
+
+\newpage
+
+## Predictor Variables $X_t$
+
+All predictors except ESR are included as potential regressors.
+
+```{r}
+predictor_names <- c("USR","EIF","ERECB","EFX","EDY","ESP",
+                     "UIF","URR","UDY","UOIL")
+
+X_all <- q2_data[, predictor_names]
+```
+
+## OLS Estimation of Linear Probability Model
+
+We estimate:
+$$
+Y_{t+1} = \beta' X_t + \varepsilon_t.
+$$
+
+```{r}
+Y_lead <- Y[2:n]
+X_t <- X_all[1:(n-1), ]
+
+fit_all <- lm(Y_lead ~ ., data = data.frame(Y_lead, X_t))
+summary(fit_all)
+```
+
+\newpage
+
+## Construct Hit Ratio
+
+Hit indicator:
+$$
+Z_t(a) = 
+\begin{cases}
+1 & \hat P(R_t>0|X_{t-1}) > a \text{ and } R_t>0, \\
+1 & \hat P(R_t>0|X_{t-1}) \le a \text{ and } R_t \le 0, \\
+0 & \text{otherwise}.
+\end{cases}
+$$
+
+Function to compute hit ratio:
+
+```{r}
+compute_Z <- function(vars, a = 0.5) {
+  
+  X_sub  <- q2_data[, vars]
+  X_t    <- X_sub[1:(n-1), , drop = FALSE]
+  Y_lead <- Y[2:n]
+  
+  reg_df <- data.frame(Y_lead, X_t)
+  fit    <- lm(Y_lead ~ ., data = reg_df)
+  phat   <- as.numeric(fitted(fit))
+  
+  actual <- Y[2:n]
+  
+  Z_t <- ifelse(phat > a & actual == 1, 1,
+         ifelse(phat <= a & actual == 0, 1, 0))
+  
+  Z_a <- mean(Z_t)
+  
+  return(list(Z = Z_a, fit = fit, phat = phat, Zt = Z_t))
+}
+```
+
+\newpage
+
+## Best Predictor Combination (with $a = 0.5$)
+
+We search all $2^{10} -1 = 1023$ non-empty subsets.
+
+```{r}
+best_Z <- -Inf
+best_set <- NULL
+best_fit <- NULL
+
+for (k in 1:length(predictor_names)) {
+  subsets_k <- combn(predictor_names, k, simplify = FALSE)
+  
+  for (vars in subsets_k) {
+    res <- compute_Z(vars, a = 0.5)
+    
+    if (res$Z > best_Z) {
+      best_Z   <- res$Z
+      best_set <- vars
+      best_fit <- res$fit
+    }
+  }
+}
+
+summary_table <- tibble(
+  Metric = c('Best Z value', 'Set Maximising Z'),
+  Value = c(as.character(best_Z), paste(best_set, collapse = ", "))
+)
+
+kable(summary_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'Maximising Hit Rate',
+      booktabs = FALSE) %>%
+  kable_styling(latex_options = c("bordered", "hold_position"))
+```
+\newpage
+
+```{r, fig.cap='Distribution of Predicted Probabilities', fig.height=3}
+summary(best_fit)
+phat <- fitted(best_fit)
+hist(phat, breaks=30, col='lightgreen', 
+     main='Distribution of Predicted Probabilities', xlab='P(R>0 | X)')
+```
+
+\newpage
+
+## For the Best Predictor Set, Find the Best Threshold (a)
+
+We evaluate $Z(a)$ for $a$ from 0.01 to 0.99.
+
+```{r}
+a_grid <- seq(0.01, 0.99, by = 0.01)
+Z_vals <- numeric(length(a_grid))
+
+for (i in seq_along(a_grid)) {
+  res <- compute_Z(best_set, a = a_grid[i])
+  Z_vals[i] <- res$Z
+}
+
+a_star <- a_grid[which.max(Z_vals)]
+Z_max  <- max(Z_vals)
+
+mle_table <- tibble(
+  Metric = c('a', 'Z(a)'),
+  Maximiser = c(a_star, Z_max)
+)
+kable(mle_table,
+      format = 'latex',
+      align = 'c',
+      caption = 'Z(a) Maximiser',
+      booktabs = FALSE) %>%
+  kable_styling(latex_options = c("bordered", "hold_position"))
+```
+\newpage 
+
+## Plot Z(a)
+
+```{r, fig.cap="Hit Ratio Across Thresholds"}
+plot(a_grid, Z_vals, type = "l",
+     xlab = "a",
+     ylab = "Z(a)",
+     main = "Hit Ratio Across Thresholds")
+abline(v = a_star, col = "red", lty = 2)
+```
+
+The optimal threshold $a^*$ maximises the hit ratio. The best-performing predictor subset and the maximum hit ratio are reported above.
+
+## Time Series of Hit Accuracy
+```{r, fig.cap='Hit Indicator with Best Set and Maximiser a Value'}
+res_best <- compute_Z(best_set, a=a_star)
+plot(res_best$Zt, type='l', col='darkgreen', main='Hit Indicator Over Time', 
+     ylab='Hit (1=Correct)', xlab='Time')
+```
+
+
+
+## Summary
+
+We investigated the probability that the equity index return is positive using a linear probability model and evaluated the forecasting accuracy through the hit ratio metric. Using the ESR series as the return variable, we construct a binary indicator that equals 1 when the return is positive and 0 otherwise. The conditional probability of a positive return is estimated using OLS with a wide set of macroeconomic and financial predictors.
+
+First, the linear probability model was estimated using all available regressors. This provides initial evidence about which economic indicators carry information about the sign of next-month returns. Several predictors, including ERECB, UIF, and URR, show statistical significance, suggesting that monetary conditions and labour-market variables may have predictive content for equity return direction.
+
+Next, the forecasting performance of the model is evaluated using the hit ratio, which measures the proportion of times the model’s directional forecast matches the realised return for a fixed probability threshold. With the threshold set to 0.5, we conduct an exhaustive search over all 1,023 non-empty subsets of the predictors. This identifies the combination of regressors that produces the best forecasting accuracy.
+
+The best-performing subset consists of the variables USR, EIF, ERECB, EFX, EDY, ESP, UIF, and URR. This specification achieves a hit ratio of approximately 0.6897, meaning the model correctly predicts the return direction about 69 percent of the time. This suggests that the selected predictors possess meaningful forecasting power for equity market direction over short horizons.
+
+Using this optimal predictor set, the hit ratio is evaluated over threshold values ranging from 0.01 to 0.99. The hit-ratio curve exhibits a clear maximum at $\alpha$ = 0.50. At $\alpha$ = 0.50, the model achieves its highest hit ratio of approximately 0.6897.
+
+\newpage
+
+# Question 3
+
+In question 3, we estimate the discrete-time CIR model for the short rate given by: 
+
+$$r_t = \mu(1-\phi) + \phi r_{t-1} + r_{t-1}^{1/2}u_t$$
+
+with $u_t \overset{i.i.d}\sim N(0,\sigma^2)$. This is done by using Maximum Likelihood Estimation (MLE) and deriving the asymptotic covariance matrix using the Gaussian log-likelihood:
+
+$$l(\theta)=\sum_{t=2}^T \log f(r_t \mid r_{t-1},\theta)$$
+
+where $f(r_t \mid r_{t-1}, \theta) = \frac{1}{\sqrt{2\pi r_{t-1}\sigma^2}} e^{ -\frac{1}{2r_{t-1}\sigma^2} \left(r_t - \mu(1-\phi) - \phi r_{t-1}\right)^2}$ and $\theta = (\mu,\phi,\sigma^2)'$
+
+## Clean and Prepare Data
+
+The first step is to clean and prepare the data in `data_coursework_Q3.xls` and converting the interest rates from percentages to decimals.
+
+```{r}
+q3 <- q3_data %>%
+    # Rename columns
+    rename(
+        date = 1,
+        rUS = 2,
+        rUK = 3
+    ) %>%
+    # Convert data types and drop NA values
+    mutate(
+        date = as.Date(date),
+        rUS = as.numeric(rUS) / 100,
+        rUK = as.numeric(rUK) / 100
+    ) %>%
+    drop_na()
+
+```
+
+```{r, fig.cap='Time Series Plot'}
+ggplot(q3, aes(x = date)) +
+  geom_line(aes(y = rUS, colour = "US")) +
+  geom_line(aes(y = rUK, colour = "UK")) +
+  labs(
+    x = "Date",
+    y = "Short Rate",
+    title = "US and UK Short Rates",
+    colour = "Country"
+  ) +
+  scale_colour_manual(values = c("US" = "blue", "UK" = "red")) +
+  theme_minimal()
+
+```
+## CIR Model
+
+Using the short rates for the US and UK, we use Maximum Likelihood Estimation (MLE) and derive the asymptotic covariance matrix using the Gaussian log-likelihood.
+
+Conditional on $r_{t-1}$ we have
+
+$$E(r_t \mid r_{t-1}) = \mu(1-\phi) + \phi r_{t-1}$$
+
+and 
+
+$$\operatorname{Var}(r_t \mid r_{t-1}) = \sigma^2 r_{t-1}$$
+
+Hence the conditional density of $r_t$ given $r_{t-1}$ is Gaussian:
+
+$$ r_t \mid r_{t-1} \sim N\!\left(\mu(1-\phi) + \phi r_{t-1},\; \sigma^2 r_{t-1} \right)$$
+
+Letting $\theta = (\mu,\phi,\sigma^2)'$ and writing $m_t(\theta) = \mu(1-\phi) + \phi r_{t-1}$,
+the conditional log-density is
+$$ \log f(r_t \mid r_{t-1},\theta) = -\tfrac12 \log(2\pi) -\tfrac12 \log(\sigma^2) -\tfrac12 \log r_{t-1} -\frac{\big[r_t - m_t(\theta)\big]^2}{2\sigma^2 r_{t-1}}$$
+
+The Gaussian log-likelihood for an observed sample $\{r_t\}_{t=1}^T$ is then
+
+$$l(\theta) = \sum_{t=2}^{T} \log f(r_t \mid r_{t-1},\theta)$$
+
+We obtain the MLE $\hat\theta$ by maximising $l(\theta)$ and compute the asymptotic covariance matrix as the inverse of the observed information, the negative Hessian of $l(\theta)$ evaluated at $\hat\theta$. For numerical stability, $\sigma^{2}$ was reparameterised to $e^{\gamma}$, ensuring positivity. This also matches the approach followed in the subsequent Vasicek model.
+
+```{r}
+# CIR negative log-likelihood (with log-variance reparameterisation)
+cir_neglogL <- function(theta, r) {
+  mu <- theta[1]
+  phi <- theta[2]
+  gamma <- theta[3] # log(sigma2)
+  sigma2 <- exp(gamma) # ensures sigma2 > 0
+
+  r_t <- r[-1]
+  r_lag <- r[-length(r)]
+
+  # Conditional mean: mu(1 - phi) + phi * r_{t-1}
+  m_t <- mu * (1 - phi) + phi * r_lag
+
+  # Log-density under N(m_t, sigma2 * r_{t-1})
+  log_func <- -0.5 * log(2 * pi) -
+              0.5 * log(sigma2) -
+              0.5 * log(r_lag) -
+              (r_t - m_t)^2 / (2 * sigma2 * r_lag)
+
+  # Negative log-likelihood (for optim to minimise)
+  -sum(log_func)
+}
+
+estimate_cir <- function(r) {
+  # Starting values
+  start_mu <- mean(r)
+  start_phi <- 0.9
+  start_log_sigma2 <- log(var(diff(r))) # log-variance
+  start_theta <- c(start_mu, start_phi, start_log_sigma2)
+
+  # Optimise negative log-likelihood
+  opt <- optim(
+    par = start_theta,
+    fn = cir_neglogL,
+    r = r,
+    method = "BFGS",
+    hessian = TRUE
+  )
+
+  # Recover parameters in original scale
+  mu_hat <- opt$par[1]
+  phi_hat <- opt$par[2]
+  gamma_hat <- opt$par[3]
+  sigma2_hat <- exp(gamma_hat)
+
+  # Hessian of negative log-likelihood
+  H <- opt$hessian
+  H <- 0.5 * (H + t(H))
+
+  vcov_gamma <- solve(H) # covariance matrix for (mu, phi, gamma)
+  se_gamma <- sqrt(diag(vcov_gamma))
+
+  # Delta method for sigma2:
+  # Var(sigma2) ≈ (d sigma2 / d gamma)^2 Var(gamma) = sigma2^2 * Var(gamma)
+  se_mu <- se_gamma[1]
+  se_phi <- se_gamma[2]
+  se_sigma2 <- sigma2_hat * se_gamma[3]
+
+  logL <- -opt$value # True log-likelihood
+
+  list(
+    theta = c(mu = mu_hat, phi = phi_hat, sigma2 = sigma2_hat),
+    se = c(se_mu, se_phi, se_sigma2),
+    vcov = vcov_gamma,
+    logL = logL,
+    convergence = opt$convergence
+  )
+}
+```
+
+We now estimate the CIR model separately for the US and UK 1-month interest rates and record the MLEs, their standard errors, and the maximised log-likelihood values.
+
+```{r}
+# Estimate CIR parameters via MLE
+cir_US <- estimate_cir(q3$rUS)
+cir_UK <- estimate_cir(q3$rUK)
+cir_US # Display results
+cir_UK # Display results
+```
+
+## Vasicek Model Comparison
+
+We now estimate the Vasicek model using maximum likelihood. The Vasicek specification assumes
+
+$$ r_t = \mu(1-\phi) + \phi r_{t-1} + u_t$$
+
+with $u_t \sim N(0,\sigma^2)$.
+
+The conditional density is therefore Gaussian with constant variance,
+
+$$ r_t \mid r_{t-1} \sim N(m_t,\sigma^2)$$
+
+with $m_t = \mu(1-\phi) + \phi r_{t-1}$
+
+The log-likelihood for a sample $\{r_t\}$ is
+
+$$l(\theta) = \sum_{t=2}^T \left[ -\tfrac12 \log(2\pi) -\tfrac12 \log(\sigma^2) -\frac{(r_t - m_t)^2}{2\sigma^2} \right]$$
+
+which we maximise numerically using BFGS. As before we obtain the asymptotic covariance matrix from the inverse Hessian.
+
+\newpage 
+
+```{r}
+# Generic MLE estimator for Vasicek
+estimate_vasicek <- function(r) {
+
+  # Negative log-likelihood for Vasicek with sigma2 = exp(gamma)
+  vasicek_neglogL <- function(theta, r) {
+    mu <- theta[1]
+    phi <- theta[2]
+    sigma2 <- exp(theta[3])  # ensures sigma2 > 0
+
+    # Conditional mean: mu(1 - phi) + phi * r_{t-1}
+    mean_t <- mu + phi * (r[-length(r)] - mu)
+
+    # Return Negative log-likelihood (what optim minimises)
+    -sum(dnorm(r[-1], mean = mean_t, sd = sqrt(sigma2), log = TRUE))
+  }
+
+  # Initial values in reparameterised space (mu, phi, log(sigma2))
+  init <- c(mean(r), 0.9, log(var(r)))
+
+  # Optimise negative log-likelihood
+  opt <- optim(init, vasicek_neglogL, r = r, method = "BFGS", hessian = TRUE)
+
+  # Recover parameters
+  mu_hat <- opt$par[1]
+  phi_hat <- opt$par[2]
+  sigma2_hat <- exp(opt$par[3])
+
+  # Hessian of negative log-likelihood
+  H <- opt$hessian
+  H <- (H + t(H)) / 2  # symmetrise
+
+  vcov_hat <- tryCatch(
+    solve(H),
+    error = function(e) diag(NA, length(opt$par))
+  )
+
+  # True log-likelihood
+  logL <- -opt$value
+
+  list(
+    par = c(mu = mu_hat, phi = phi_hat, sigma2 = sigma2_hat),
+    vcov = vcov_hat, # for (mu, phi, log sigma2)
+    logL = logL, # True log-likelihood
+    convergence = opt$convergence
+  )
+}
+```
+
+\newpage
+
+We now estimate the Vasicek model separately for the US and UK 1-month interest rates and record the MLEs, their standard errors, and the maximised log-likelihood values.
+
+```{r}
+# Estimate Vasicek parameters for US & UK
+vas_US <- estimate_vasicek(q3$rUS)
+vas_UK <- estimate_vasicek(q3$rUK)
+
+# Display results
+vas_US
+vas_UK
+```
+
+\newpage
+
+## CIR and Vasicek MLE Discussion
+
+```{r}
+# Summary table for CIR and Vasicek (US & UK)
+summary_q3 <- data.frame(
+  Model = c("CIR", "CIR", "Vasicek", "Vasicek"),
+  Country = c("US", "UK", "US", "UK"),
+  mu = c(cir_US$theta[1],   cir_UK$theta[1],
+              vas_US$par["mu"],  vas_UK$par["mu"]),
+  phi = c(cir_US$theta[2],   cir_UK$theta[2],
+              vas_US$par["phi"], vas_UK$par["phi"]),
+  sigma2 = c(cir_US$theta[3],   cir_UK$theta[3],
+              vas_US$par["sigma2"], vas_UK$par["sigma2"]),
+  se_mu = c(cir_US$se[1],  cir_UK$se[1],
+              sqrt(vas_US$vcov[1,1]), sqrt(vas_UK$vcov[1,1])),
+  se_phi = c(cir_US$se[2],  cir_UK$se[2],
+              sqrt(vas_US$vcov[2,2]), sqrt(vas_UK$vcov[2,2])),
+  se_sigma2 = c(cir_US$se[3], cir_UK$se[3],
+                sqrt(vas_US$vcov[3,3]) * vas_US$par["sigma2"],
+                sqrt(vas_UK$vcov[3,3]) * vas_UK$par["sigma2"]),
+  logL = c(cir_US$logL, cir_UK$logL,
+              vas_US$logL, vas_UK$logL)
+)
+# Round for nicer display
+summary_q3_rounded <- summary_q3 %>%
+  mutate(
+    mu = round(mu, 4),
+    se_mu = round(se_mu, 4),
+    phi = round(phi, 4),
+    se_phi = round(se_phi, 4),
+    sigma2 = round(sigma2, 6),
+    se_sigma2 = round(se_sigma2, 6),
+    logL = round(logL, 2)
+  ) %>%
+  select(
+    Model, Country,
+    mu, se_mu,
+    phi, se_phi,
+    sigma2, se_sigma2,
+    logL
+  )
+
+kable(summary_q3_rounded,
+      col.names = c('Model', 'Country', '$\\mu$', '$SE_{\\mu}$', '$\\phi$', 
+                    '$SE_{\\phi}$', '$\\sigma^2$', '$SE_{\\sigma^2}$', 
+                    'Log-Likelihood'),
+      format = 'latex',
+      align = 'c',
+      caption = 'CIR and Vasicek Model Parameter Estimates',
+      booktabs = FALSE,
+      escape = FALSE) %>%
+  kable_styling(latex_options = c("bordered", "hold_position"))
+```
+
+```{r, fig.cap='Fitted Models'}
+r_lag_US <- q3$rUS[-length(q3$rUS)]
+r_lag_UK <- q3$rUK[-length(q3$rUK)]
+
+
+cir_US_mean <- cir_US$theta[1] * (1 - cir_US$theta[2]) + cir_US$theta[2] *
+  r_lag_US
+vas_US_mean <- vas_US$par['mu'] * (1 - vas_US$par['phi']) + vas_US$par['phi'] *
+  r_lag_US
+
+
+plot(q3$rUS[-1], type='l', lwd=2, col='black', 
+     main='US: Actual vs Fitted (CIR & Vasicek)', ylab='Rate')
+lines(cir_US_mean, col='blue', lwd=2)
+lines(vas_US_mean, col='red', lwd=2)
+legend('topright', legend=c('Actual','CIR Fitted','Vasicek Fitted'), 
+       col=c('black','blue','red'), lwd=2)
+```
+## CIR vs Vasicek Model Fit: Discussion
+
+The CIR and Vasicek estimates for both the US and UK display broadly similar drift behaviour. In the Vasicek model, the estimated long-run means $(\hat{\mu})$ are between 5.9\% and 8.1\% per year, which is consistent with the average short-rate levels in the sample, and the CIR estimates for the UK are of comparable magnitude. For the US CIR model, the negative estimate of $\hat{\mu}$ reflects the difficulty of separately identifying the long-run mean and the degree of persistence when the autoregressive coefficient is very close to one. In all cases, the estimated autoregressive coefficient $(\hat{\phi})$ is close to 1, indicating highly persistent short rates that revert only slowly towards their long-run mean. The key difference between the models lies in the volatility structure since CIR allows the conditional variance to increase with the level of interest rates, whereas Vasicek assumes constant conditional variance.
+
+After reparameterising both models so that $\sigma^{2} = e^{\gamma}$, the optimisation becomes numerically stable and the resulting log-likelihoods are directly comparable. As seen in Table 10, the CIR model achieves higher maximised log-likelihood values than the Vasicek model for both countries: 1204.53 versus 1088.01 for the US, and 1243.33 versus 1209.03 for the UK. Since a higher log-likelihood indicates a superior in-sample fit, these results imply that the CIR specification provides a more accurate statistical description of the short-rate dynamics in both markets.
+
+In summary, while both models capture the strong persistence of interest rates, the CIR model fits the data better due to its level-dependent volatility, which appears to be an important feature of the observed short-rate behaviour. This empirical pattern is particularly relevant in environments with elevated interest rates, such as during monetary tightening or inflationary episodes. By allowing the conditional variance to increase with the level of rates, the CIR model better accommodates this feature, thereby offering a more realistic characterization of short-rate dynamics compared to the constant-volatility Vasicek model.
+
+
+\newpage
+
+# Appendix
+
+## Question 1
+
+### Manual Regression for CAPM
+
+We have:
+
+$$r_{it} - r_{ft} = \alpha + \beta(r_{Mt} - r_{ft})  + u_t$$
+where:  
+
+  - $r_{t} - r_{ft}$ = risk-premium of our stock at time *t*
+  
+  - $r_{Mt} - r_{ft}$ = risk-premium of the market portfolio at time *t*
+  
+  - $\alpha$ = an intercept term, often interpreted as returns over that predicted amount
+  
+  - $\beta$ = factor coefficients  
+  
+  - $u_{t}$ = error term, providing an explanation for the difference between the theoretical value of the model and the actual observed       results
+  
+If we now let:
+$$\lambda = \begin{pmatrix} \alpha \\ \beta  \end{pmatrix}$$
+
+$$X \in \mathbb{R}^{T \times 2} \text{ with } X_t = \begin{pmatrix}1 & r_{Mt} - r_{ft} \end{pmatrix}$$
+representing the $t^{th}$ row of the matrix
+
+$$y = \begin{pmatrix} r_{i1} - r_{f1} \\ r_{i2} - r_{f2} \\ \vdots \\ r_{iT} - r_{fT}\end{pmatrix} \in \mathbb{R}^T$$
+
+$$u = \begin{pmatrix} u_1 \\ u_2 \\ \vdots \\ u_T \end{pmatrix} \in \mathbb{R}^T$$
+
+we can retrieve a regression model:
+$$y = X\lambda + u$$
+We know the OLS estimator $\hat\lambda = (X'X)^{-1}X'y$ if $(X'X)^{-1}$ exists. X is full rank and contains only constants so is non-stochastic and $(X'X)^{-1}$ will definitely exist.
+
+
+```{r}
+y <- matrix(data = q1$rI_excess, ncol = 1)
+X <- cbind(1, q1$rM_excess)
+```
+
+Now we have $y$ and $X$ we can create our OLS estimator $\hat{\lambda}$:
+
+```{r}
+beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y
+beta_hat
+```
+
+Finally we can fit our model to the data and calculate our residuals, RSS and $R^2$. After this we can return all of the data about our model to a table:
+
+```{r, tidy = FALSE}
+y_hat <- X %*% beta_hat
+residue <- y - y_hat
+RSS <- t(residue) %*% residue
+TSS <- t(y - mean(q1$rI_excess))%*%(y-mean(q1$rI_excess))
+R2 <- 1 - (RSS/TSS)
+R2_bar <- 1 - ((length(y)-1)/(length(y)-dim(X)[2]))*(1-R2)
+
+regression_summary <- tibble(
+  Metric = c(
+ "$\\alpha$",
+ "$\\beta$",
+ "RSS",
+ "$R^2$",
+ "$\\bar{R^2}$"
+ ),
+ Value = c(
+ beta_hat[1],
+ beta_hat[2],
+ RSS,
+ R2,
+ R2_bar
+ )
+ )
+ kable(regression_summary, 
+       align ="c",
+       format = 'latex',
+       caption ="Summary of Regression for CAPM",
+       escape = FALSE,
+       booktabs = TRUE) %>%
+ kable_styling(latex_options = c("bordered", "hold_position"))
+```
+
+### Manual Regression for Second Model
+
+We have:
+
+$$
+r_{it} - r_{ft}
+= \alpha 
++ \beta_1 D_t (r_{Mt} - r_{ft})
++ \beta_2 (1 - D_t)(r_{Mt} - r_{ft})
++ \beta_3 (r_{Mt} - r_{ft})^2
++ u_t
+$$
+
+where:  
+
+  - $r_{t} - r_{ft}$ = risk-premium of our stock at time *t*
+  
+  - $r_{Mt} - r_{ft}$ = risk-premium of the market portfolio at time *t*
+  
+  - $D_t = \begin{cases} 1 & r_{Mt} - r_{ft} > 0 \\ 0 & \text{otherwise} \end{cases}$
+  
+  - $\alpha$ = an intercept term, often interpreted as returns over that predicted amount
+  
+  - $\beta$ = factor coefficients  
+  
+  - $u_{t}$ = error term, providing an explanation for the difference between the theoretical value of the model and the actual observed       results
+  
+If we now let:
+$$\lambda = \begin{pmatrix} \alpha \\ \beta_1 \\ \beta_2 \\ \beta_3  \end{pmatrix}$$
+
+$$X \in \mathbb{R}^{T \times 4} \text{ with } X_t = \begin{pmatrix}1 & D_t (r_{Mt} - r_{ft} & (1 - D_t)(r_{Mt} - r_{ft}) &  (r_{Mt} - r_{ft})^2\end{pmatrix}$$
+representing the $t^{th}$ row of the matrix
+
+$$y = \begin{pmatrix} r_{i1} - r_{f1} \\ r_{i2} - r_{f2} \\ \vdots \\ r_{iT} - r_{fT}\end{pmatrix} \in \mathbb{R}^T$$
+
+$$u = \begin{pmatrix} u_1 \\ u_2 \\ \vdots \\ u_T \end{pmatrix} \in \mathbb{R}^T$$
+
+we can retrieve a regression model:
+$$y = X\lambda + u$$
+We know the OLS estimator $\hat\lambda = (X'X)^{-1}X'y$ if $(X'X)^{-1}$ exists. X is full rank and contains only constants so is non-stochastic and $(X'X)^{-1}$ will definitely exist.
+
+
+```{r}
+y <- matrix(data = q1$rI_excess, ncol = 1)
+X <- cbind(1, q1$D_rM, q1$one_minusD_rM, q1$rM_sq)
+```
+
+Now we have $y$ and $X$ we can create our OLS estimator $\hat{\lambda}$:
+
+```{r}
+beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y
+beta_hat
+```
+
+
+Finally we can fit our model to the data and calculate our residuals, RSS and $R^2$. After this we can return all of the data about our model to a table:
+
+```{r, tidy = FALSE}
+y_hat <- X %*% beta_hat
+residue <- y - y_hat
+RSS <- t(residue) %*% residue
+TSS <- t(y - mean(q1$rI_excess))%*%(y-mean(q1$rI_excess))
+R2 <- 1 - (RSS/TSS)
+R2_bar <- 1 - ((length(y)-1)/(length(y)-dim(X)[2]))*(1-R2)
+
+regression_summary <- tibble(
+  Metric = c(
+ "$\\alpha$",
+ "$\\beta_1$",
+ "$\\beta_2$",
+ "$\\beta_3$",
+ "RSS",
+ "$R^2$",
+ "$\\bar{R^2}$"
+ ),
+ Value = c(
+ beta_hat[1],
+ beta_hat[2],
+ beta_hat[3],
+ beta_hat[4],
+ RSS,
+ R2,
+ R2_bar
+ )
+ )
+ kable(regression_summary, 
+       align ="c",
+       format = 'latex',
+       caption ="Summary of Regression for Second Model",
+       escape = FALSE,
+       booktabs = TRUE) %>%
+ kable_styling(latex_options = c("bordered", "hold_position"))
+```
+
+## Question 2
+
+### Manual Regression for Linear Probability Model
+
+$$
+Y_{t+1} = \beta'X_t + \varepsilon_t
+$$
+
+Where: 
+
+$$
+\beta = 
+  \begin{pmatrix} 
+    \alpha \\ \beta_{\text{USR}} \\ \beta_{\text{EIF}} \\ \beta_{\text{ERECB}}
+    \\ \beta_{\text{EFX}} \\ \beta_{\text{EDY}} \\ \beta_{\text{ESP}} \\ \beta_{\text{UIF}}
+    \\ \beta_{\text{URR}} \\ \beta_{\text{UDY}} \\ \beta_{\text{UOIL}}
+  \end{pmatrix}
+$$
+
+With: 
+
+  - $\alpha$ = an intercept term, often interpreted as returns over that predicted amount
+  
+  - $\beta_i$ = factor coefficients  
+  
+  - $\varepsilon_{t}$ = error term, providing an explanation for the difference between the theoretical value of the model and the actual observed results
+  
+$$
+X \in \mathbb{R}^{11 \times T} \text{ with } X_t =
+\begin{pmatrix}
+1 \\ \beta_\text{USR} \\ \beta_\text{EIF} \\ \beta_\text{ERECB} 
+\\ \beta_\text{EFX} \\ \beta_\text{EDY} \\ \beta_\text{ESP} \\ \beta_\text{UIF}
+\\ \beta_\text{URR} \\ \beta_\text{UDY} \\ \beta_\text{UOIL}
+\end{pmatrix}
+$$
+representing the $t^{th}$ column of the matrix
+
+$$y = \begin{pmatrix} Y_2 & Y_3 & ... & Y_T \end{pmatrix} \in \mathbb{M}^{1 \times (T-1)}$$
+
+$$\varepsilon = \begin{pmatrix} \varepsilon_1 & \varepsilon_2 & ... & \varepsilon_{T-1} \end{pmatrix} \in \mathbb{M}^{1 \times (T-1)}$$
+We generate the linear model:
+$$y = \beta'X + \varepsilon$$
+
+We know the OLS estimator $\hat{\beta'} = yX'(XX')^{-1}$ if $(XX')^{-1}$ exists. X is full rank and contains only constants so is non-stochastic and $(XX')^{-1}$ will definitely exist.
+
+
+```{r}
+y <- t(matrix(data = Y_lead, ncol = 1))
+X <- t(cbind(1, X_t$USR, X_t$EIF, X_t$ERECB, X_t$EFX,
+           X_t$EDY, X_t$ESP, X_t$UIF, X_t$URR, X_t$UDY, X_t$UOIL))
+```
+
+Now we have $y$ and $X$ we can create our OLS estimator $\hat{\beta'}$:
+
+```{r}
+beta_hat <- y %*% t(X) %*% solve(X %*% t(X))
+beta_hat
+```
+
+
+Finally we can fit our model to the data and calculate our residuals, RSS and $R^2$. After this we can return all of the data about our model to a table:
+
+```{r, tidy = FALSE}
+y_hat <- beta_hat %*% X
+residue <- y - y_hat
+RSS <- residue %*% t(residue)
+TSS <- (y - mean(Y_lead))%*%t(y - mean(Y_lead))
+R2 <- 1 - (RSS/TSS)
+R2_bar <- 1 - ((dim(y)[2]-1)/(dim(y)[2]-dim(X)[1]))*(1-R2)
+
+regression_summary <- tibble(
+  Metric = c(
+ "$\\alpha$",
+ "$\\beta_\\text{USR}$",
+ "$\\beta_\\text{EIF}$", 
+ "$\\beta_\\text{ERECB}$",
+ "$\\beta_\\text{EFX}$",
+ "$\\beta_\\text{EDY}$",
+ "$\\beta_\\text{ESP}$",
+ "$\\beta_\\text{UIF}$",
+ "$\\beta_\\text{URR}$",
+ "$\\beta_\\text{UDY}$",
+ "$\\beta_\\text{UOIL}$",
+ "RSS",
+ "$R^2$",
+ "$\\bar{R^2}$"
+ ),
+ Value = c(
+ beta_hat[1],
+ beta_hat[2],
+ beta_hat[3],
+ beta_hat[4],
+ beta_hat[5],
+ beta_hat[6],
+ beta_hat[7],
+ beta_hat[8],
+ beta_hat[9],
+ beta_hat[10],
+ beta_hat[11],
+ RSS,
+ R2,
+ R2_bar
+ )
+ )
+ kable(regression_summary, 
+       align ="c",
+       format = 'latex',
+       caption ="Summary of Regression on Linear Probability Model",
+       escape = FALSE,
+       booktabs = TRUE) %>%
+ kable_styling(latex_options = c("bordered", "hold_position"))
+```
+
+## Question 3
+
+Here we explore the MLE derivations for each model.
+
+### CIR Model
+
+We consider the discrete-time CIR model
+$$r_t = \mu(1-\phi) + \phi r_{t-1} + r_{t-1}^{1/2} u_t,\qquad u_t\sim N(0,\sigma^2)$$
+with parameter vector
+$$\theta = (\mu,\phi,\sigma^2)'$$
+
+#### Conditional distribution and likelihood
+
+Given $r_{t-1}$,
+$$ E(r_t\mid r_{t-1})=\mu(1-\phi)+\phi r_{t-1}, \qquad \operatorname{Var}(r_t\mid r_{t-1})=\sigma^2 r_{t-1}$$
+Hence
+$$r_t\mid r_{t-1}\sim N(m_t(\theta),\sigma^2 r_{t-1})$$
+with density
+$$f(r_t\mid r_{t-1},\theta) =\frac{1}{\sqrt{2\pi\sigma^2 r_{t-1}}} e^{-\frac{[r_t-m_t(\theta)]^2}{2\sigma^2 r_{t-1}}} $$
+The conditional likelihood is
+$$L(\theta)=\prod_{t=2}^T f(r_t\mid r_{t-1},\theta)$$
+
+#### Log-likelihood
+
+Define
+$$e_t(\theta)=r_t-\mu(1-\phi)-\phi r_{t-1}$$
+Then
+$$l(\theta)=-\frac12\sum_{t=2}^T \left[ \log(2\pi\sigma^2 r_{t-1}) + \frac{e_t(\theta)^2}{\sigma^2 r_{t-1}} \right]$$
+
+For numerical stability we reparameterise
+$$\sigma^2=e^\gamma,\qquad \theta^*=(\mu,\phi,\gamma)'$$
+Then
+$$l(\theta^*)
+=-\frac12\sum_{t=2}^T \left[\log(2\pi)+\gamma+\log r_{t-1}
++\frac{e_t(\theta)^2}{e^\gamma r_{t-1}}\right]$$
+
+#### Score vector
+
+Using
+$$\dfrac{\partial e_t}{\partial \mu}=-(1-\phi), \qquad \dfrac{\partial e_t}{\partial \phi}=\mu-r_{t-1}$$
+the score components are
+$$
+\dfrac{\partial l}{\partial\mu}
+=\sum_{t=2}^T \frac{1-\phi}{e^\gamma r_{t-1}} e_t(\theta)
+$$
+$$\dfrac{\partial l}{\partial\phi} =\sum_{t=2}^T \frac{r_{t-1}-\mu}{e^\gamma r_{t-1}} e_t(\theta)$$
+$$ \dfrac{\partial l}{\partial\gamma} =-\frac{T-1}{2} +\frac12\sum_{t=2}^T \frac{e_t(\theta)^2}{e^\gamma r_{t-1}} $$
+
+The MLE satisfies
+$$\frac{\partial l}{\partial\mu}=0,\qquad \frac{\partial l}{\partial\phi}=0,\qquad \frac{\partial l}{\partial\gamma}=0 $$
+and is obtained using BFGS.  
+The estimate on the original scale is $\hat\sigma^2=e^{\hat\gamma}$.
+
+#### Hessian, information and ACM
+
+The Hessian of the log-likelihood is
+$$H_T(\theta)=\frac{\partial^2 l(\theta)}{\partial\theta\partial\theta^{'}}$$
+The Fisher information is
+$$I_T(\theta_0)= -E_{\theta_0}[H_T(\theta_0)]$$
+In practice we use the observed information
+$$ \hat I_T(\hat\theta)\approx -H_T(\hat\theta) $$
+Hence the asymptotic covariance matrix is
+$$ \widehat{\operatorname{Var}}(\hat\theta) = \left(\hat I_T(\hat\theta)\right)^{-1} = \big(-H_T(\hat{\theta^*})\big)^{-1} $$
+For $(\mu,\phi,\sigma^2)$ we apply the delta method, using
+$$\frac{\partial \sigma^2}{\partial\gamma}=\sigma^2$$
+
+### Vasicek Model
+
+The Vasicek process in discrete time is
+$$r_t=\mu(1-\phi)+\phi r_{t-1}+u_t,\qquad u_t\sim N(0,\sigma^2)$$
+with parameter vector
+$$\theta=(\mu,\phi,\sigma^2)'$$
+
+#### Conditional distribution and likelihood
+
+Given $r_{t-1}$,
+$$E(r_t\mid r_{t-1})=\mu(1-\phi)+\phi r_{t-1}, \qquad \operatorname{Var}(r_t\mid r_{t-1})=\sigma^2 $$
+Thus
+$$r_t\mid r_{t-1}\sim N(m_t(\theta),\sigma^2) $$
+with density
+$$f(r_t\mid r_{t-1},\theta) = \frac{1}{\sqrt{2\pi\sigma^2}} e^{-\frac{[r_t-m_t(\theta)]^2}{2\sigma^2}} $$
+The likelihood is
+$$L(\theta)=\prod_{t=2}^T f(r_t\mid r_{t-1},\theta)$$
+
+#### Log-likelihood
+
+Define
+$$e_t(\theta)=r_t-\mu(1-\phi)-\phi r_{t-1}$$
+Then
+$$ l(\theta) = -\frac12\sum_{t=2}^T \left[\log(2\pi\sigma^2) + \frac{e_t(\theta)^2}{\sigma^2} \right] $$
+
+Reparameterise
+$$ \sigma^2=e^\gamma,\qquad \theta^*=(\mu,\phi,\gamma)' $$
+Then
+$$l(\theta^*) =-\frac12\sum_{t=2}^T \left[ \log(2\pi)+\gamma + \frac{e_t(\theta)^2}{e^\gamma} \right]$$
+
+#### Score vector
+
+Using
+$$\dfrac{\partial e_t}{\partial\mu}=-(1-\phi),\qquad \dfrac{\partial e_t}{\partial\phi}=\mu-r_{t-1}$$
+we obtain
+$$\dfrac{\partial l}{\partial\mu} =\sum_{t=2}^T \frac{1-\phi}{e^\gamma} e_t(\theta) $$
+$$\dfrac{\partial l}{\partial\phi} =\sum_{t=2}^T \frac{r_{t-1}-\mu}{e^\gamma} e_t(\theta)$$
+$$\dfrac{\partial l}{\partial\gamma} =-\frac{T-1}{2} +\frac12\sum_{t=2}^T \frac{e_t(\theta)^2}{e^\gamma} $$
+
+The MLE solves
+$$\frac{\partial l}{\partial\mu}=0,\qquad \frac{\partial l}{\partial\phi}=0,\qquad \frac{\partial l}{\partial\gamma}=0 $$
+and is computed via BFGS, with $\hat\sigma^2=e^{\hat\gamma}$.
+
+#### Hessian, Information and ACM
+
+The Hessian of the log-likelihood is
+$$H_T(\theta)=\frac{\partial^2 l(\theta)}{\partial\theta\partial\theta^{'}}$$
+The Fisher information is
+$$I_T(\theta_0)= -E_{\theta_0}[H_T(\theta_0)]$$
+The observed information is
+$$\hat I_T(\hat\theta)\approx -H_T(\hat\theta)$$
+Thus the asymptotic covariance matrix is
+$$\widehat{\operatorname{Var}}(\hat\theta) = \left(\hat I_T(\hat\theta)\right)^{-1}
+=\big(-H_T(\hat{\theta^*})\big)^{-1}$$
+The covariance for $(\mu,\phi,\sigma^2)$ follows from the delta method, using
+$$\frac{\partial \sigma^2}{\partial\gamma}=\sigma^2$$
