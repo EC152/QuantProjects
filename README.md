@@ -4,8 +4,6 @@ A curated portfolio of quantitative finance projects covering systematic trading
 
 The repository focuses on applied research and implementation in Python, C++, and R. Each project is structured as a standalone piece of quantitative finance work, with emphasis on methodology, numerical implementation, backtesting discipline, model validation, and economic interpretation.
 
-Projects have been cleaned and anonymised for public portfolio use. Academic identifiers, institution-specific wording, team-member names, and assessment-specific instructions should be removed before publication. The aim is to present the work as independent technical projects rather than assignment submissions.
-
 ## Projects
 
 | Project                                               | Description                                                                                                                                                                                                                    | Main Techniques                                                                                                                                                                                     |
@@ -21,18 +19,22 @@ Projects have been cleaned and anonymised for public portfolio use. Academic ide
 | 09 Yield-Curve Forecasting and Dynamic Allocation      | Empirical study of whether term-spread signals improve equity return forecasts and generate economic value in tactical asset allocation                                                                                        | Predictive Regressions, Rolling-Window Forecasting, Stationarity Diagnostics, Clark-West Tests, Mark-Kilian Bootstrap, Volatility-Targeted Allocation, Performance-Fee Analysis                     |
 | 10 Financial Statistics and Short-Rate Modelling      | Statistical finance toolkit covering equity factor regressions, directional prediction, and short-rate model estimation                                                                                                        | CAPM, Asymmetric Beta Regressions, F-Tests, T-Tests, Linear Probability Models, Hit-Ratio Optimisation, CIR Estimation, Vasicek Comparison, Maximum Likelihood                                      |
 | 11 Equity Portfolio and APT Analysis                  | Portfolio-analysis project evaluating equity risk-return behaviour, diversification, investor utility, and factor exposures                                                                                                    | Return Calculation, Covariance Matrices, Sharpe Ratios, Capital Allocation Line, Mean-Variance Utility, Single-Factor APT Betas, Multi-Factor Extension Discussion                                  |
+| 12 Short-Horizon Market Making with Order Book and Derivatives Signals | Tests whether derivatives-implied features improve 10-second adverse-selection prediction beyond limit order book signals, with robust validation and deployable market-making decision rules | LOB Feature Engineering, Order-Flow Imbalance, Implied-Volatility Surface Features, XGBoost, MLP Ensembles, HistGradientBoosting, TCN, SHAP, Isotonic Calibration, Day-Block Bootstrap, Placebo Testing, Within-Day AUC |
 
 ## Technical Coverage
 
 ### Programming and Implementation
 
-* Python: pandas, NumPy, scikit-learn, TensorFlow, XGBoost, matplotlib, seaborn
+* Python: pandas, NumPy, scikit-learn, PyTorch, TensorFlow, XGBoost, matplotlib, seaborn
 * C++: Custom Matrix Classes, Numerical Linear Algebra, Conjugate Gradient, Rolling Backtest Architecture
 * R: Regression Modelling, Statistical Inference, Short-Rate Estimation
 * Jupyter Notebooks, Python Scripts, and Report-Style Research Documentation
 
 ### Trading and Market Microstructure
 
+* Limit Order Book Feature Engineering
+* Order-Flow Imbalance and Signed Trade Flow
+* Adverse-Selection Modelling
 * Systematic Trading Signal Validation
 * ML Meta-Labelling
 * Volatility-Targeted Strategy Construction
@@ -47,7 +49,8 @@ Projects have been cleaned and anonymised for public portfolio use. Academic ide
 ### Derivatives and Numerical Finance
 
 * Black-Scholes Pricing and Greeks
-* Implied Volatility Estimation
+* Implied Volatility and Volatility-Surface Features
+* Volatility Risk Premium Analysis
 * Heston Stochastic Volatility
 * Local-Volatility Models
 * Barrier Option Pricing
@@ -69,6 +72,12 @@ Projects have been cleaned and anonymised for public portfolio use. Academic ide
 
 ### Empirical Finance and Statistical Learning
 
+* XGBoost, MLP Ensembles, and Temporal Convolutional Networks
+* SHAP Feature Importance
+* Isotonic Probability Calibration
+* Placebo and Robustness Testing
+* Day-Block Bootstrap Inference
+* Pooled vs Within-Day Model Evaluation
 * FX Strategy Combination
 * Currency Factor Pricing
 * Fama-MacBeth Regressions
@@ -92,5 +101,6 @@ QuantProjects/
 ├── 08_fx_strategy_combination_currency_factor_pricing/
 ├── 09_yield_curve_forecasting_dynamic_allocation/
 ├── 10_financial_statistics_short_rate_modelling/
-└── 11_equity_portfolio_apt_analysis/
+├── 11_equity_portfolio_apt_analysis/
+└── 12_short_horizon_market_making_lob_derivatives/
 ```
