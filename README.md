@@ -1,6 +1,6 @@
 # QuantProjects
 
-A curated portfolio of quantitative finance projects covering systematic trading, derivatives, market making, stochastic modelling, empirical finance, machine learning, and portfolio optimisation.
+A portfolio of quantitative finance projects covering systematic trading, derivatives, market making, stochastic modelling, empirical finance, machine learning, and portfolio optimisation.
 
 The repository focuses on applied research and implementation in Python, C++, and R. Each project is structured as a standalone piece of quantitative finance work, with emphasis on methodology, numerical implementation, backtesting discipline, model validation, and economic interpretation.
 
